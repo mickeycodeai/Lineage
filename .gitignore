@@ -1,0 +1,12 @@
+# Dependency directories
+node_modules/
+
+# Environment variables (If you use a .env file locally)
+.env
+
+# OS-specific files
+.DS_Store
+Thumbs.db
+
+# Build logs
+npm-debug.log*

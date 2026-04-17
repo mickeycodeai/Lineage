@@ -1,0 +1,233 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    
+    <title>Lineage</title>
+    <link rel="icon" type="image/png" href="https://i.postimg.cc/mgv0gWYz/logo.png">
+
+    <style>
+        :root { --bg: #0d1117; --text: #c9d1d9; --accent: #58a6ff; --input-bg: #161b22; --border: #30363d; --m17-green: #00ff88; --warning: #d29922; }
+        body { background: var(--bg); color: var(--text); font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif; margin: 0; padding: 40px; display: flex; flex-direction: column; align-items: center; min-height: 100vh; }
+        
+        header { display: flex; justify-content: space-between; align-items: flex-start; width: 100%; max-width: 1000px; border-bottom: 1px solid var(--border); padding-bottom: 25px; margin-bottom: 40px; }
+        .brand-text { font-size: 32px; font-weight: 800; color: white; letter-spacing: -1px; }
+        .version-tag { color: #8b949e; font-family: "SFMono-Regular", monospace; font-size: 14px; margin-top: 8px; }
+
+        .ascii-row { display: flex; gap: 30px; align-items: center; }
+        pre { font-size: 8px; line-height: 1.1; color: var(--m17-green); margin: 0; text-shadow: 0 0 15px rgba(0, 255, 136, 0.3); font-weight: bold; }
+
+        #terminal-content { width: 100%; max-width: 1000px; font-family: "SFMono-Regular", Consolas, monospace; font-size: 14px; line-height: 1.6; padding-bottom: 100px; }
+        
+        .input-container { width: 100%; max-width: 1000px; background: var(--input-bg); border: 1px solid var(--border); border-radius: 8px; padding: 16px 20px; display: flex; align-items: center; position: sticky; bottom: 20px; box-shadow: 0 10px 30px rgba(0,0,0,0.5); z-index: 10; }
+        .prompt-symbol { color: var(--accent); margin-right: 15px; font-weight: bold; font-size: 18px; }
+        input { background: transparent; border: none; color: white; width: 100%; outline: none; font-family: inherit; font-size: 16px; }
+
+        .message { margin: 25px 0; }
+        .user-query { color: white; font-weight: 600; opacity: 0.9; }
+        .m17-response { color: var(--text); padding-left: 24px; border-left: 3px solid var(--border); white-space: pre-wrap; }
+        
+        /* Debug Modal Styling */
+        #debugModal { display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.85); z-index:100; justify-content:center; align-items:center; backdrop-filter: blur(4px); }
+        .modal-content { background: var(--input-bg); border: 1px solid var(--border); padding: 30px; border-radius: 8px; width: 90%; max-width: 500px; box-shadow: 0 20px 50px rgba(0,0,0,0.5); }
+        .debug-input { width: 100%; background: #0d1117; border: 1px solid var(--border); color: white; padding: 10px; margin-bottom: 15px; border-radius: 4px; font-family: inherit; }
+
+        .help-block { background: #1c2128; border: 1px solid var(--border); padding: 20px; border-radius: 6px; color: var(--text); margin: 15px 0; }
+        .cmd { color: var(--accent); min-width: 100px; font-weight: bold; display: inline-block; }
+        .thinking { color: #8b949e; font-style: italic; margin-left: 10px; font-size: 13px; }
+    </style>
+</head>
+<body oncontextmenu="return false;">
+
+<header>
+    <div class="brand-box">
+        <div class="brand-text">M17 Terminal</div>
+        <div class="version-tag">CLI v0.9.8 • Developer: mikec.pascua</div>
+    </div>
+    <div class="ascii-row">
+        <pre>                                       
+ ▄▄         ▄▄▄▄▄▄   ▄▄▄   ▄▄  ▄▄▄▄▄▄▄▄     ▄▄        ▄▄▄▄   ▄▄▄▄▄▄▄▄ 
+ ██         ▀▀██▀▀   ███   ██  ██▀▀▀▀▀▀     ████     ██▀▀▀▀█  ██▀▀▀▀▀▀ 
+ ██           ██     ██▀█  ██  ██           ████    ██        ██       
+ ██           ██     ██ ██ ██  ███████     ██  ██   ██  ▄▄▄▄  ███████  
+ ██           ██     ██  █▄██  ██          ██████   ██  ▀▀██  ██       
+ ██▄▄▄▄▄▄   ▄▄██▄▄   ██   ███  ██▄▄▄▄▄▄   ▄██  ██▄  ██▄▄▄██  ██▄▄▄▄▄▄ 
+ ▀▀▀▀▀▀▀▀   ▀▀▀▀▀▀   ▀▀   ▀▀▀  ▀▀▀▀▀▀▀▀   ▀▀    ▀▀    ▀▀▀▀   ▀▀▀▀▀▀▀▀ </pre>
+        <pre>
+ .##===========================#*..
+ .#*.......................... **..
+ .#*..-@@@@#. ..     ..%@@@%.  **..
+ .#*..-@@@@@*...     .%@@@@%.  **..
+ .#*..-@@@@@@+..   ..#@@@@@%.. **..
+ .#*..-@@@%%@@-.. ..*@@#@@@%.. **.....
+ .#*..-@@@%-@@@-  .+@@@.@@@%...:-..
+ .#*..-@@@%.=@@%..-@@@..@@@%..+%#.*####%-
+ .#*..-@@@%..#@@@:@@@=..@@@%...*%.   .+%.
+ .#*..-@@@%...#@@@@@=...@@@%.  *%.  .=%.
+ .#*..-@@@%....%@@@#....@@@%.  *%. .:@:.
+ .#*..:+++=....:++=.....+++=...*%..-%:.</pre>
+    </div>
+</header>
+
+<div id="terminal-content">
+    <div style="color: #8b949e; margin-bottom: 25px; border-left: 2px solid var(--m17-green); padding-left: 15px;">
+        Welcome to the Lineage Kernel. Interaction initialized.
+        <br>Type <span style="color:var(--accent)">/help</span> for commands.
+    </div>
+</div>
+
+<div class="input-container">
+    <span class="prompt-symbol">></span>
+    <input type="text" id="userInput" placeholder="Type a message or /command..." autofocus autocomplete="off">
+</div>
+
+<div id="debugModal">
+    <div class="modal-content">
+        <h2 style="margin-top:0; color:var(--m17-green); font-size: 18px;">[SYSTEM_DEBUG_REPORT]</h2>
+        <p style="font-size:12px; color:#8b949e; margin-bottom:20px;">Transmit error logs directly to developer terminal.</p>
+        
+        <label style="display:block; font-size:11px; margin-bottom:5px; color:var(--accent);">REPORT_TYPE</label>
+        <select id="debugType" class="debug-input">
+            <option value="Logic Panic">Logic Panic (AI Behavior)</option>
+            <option value="Visual Artifact">Visual Artifact (UI Bug)</option>
+            <option value="Kernel Timeout">Kernel Timeout (Connection)</option>
+        </select>
+
+        <label style="display:block; font-size:11px; margin-bottom:5px; color:var(--accent);">ERROR_LOG_DETAILS</label>
+        <textarea id="debugMsg" rows="5" class="debug-input" placeholder="Awaiting input data..." style="resize:none;"></textarea>
+        
+        <div style="display:flex; gap:15px; justify-content:flex-end; margin-top:10px;">
+            <button onclick="closeDebug()" style="background:transparent; border:none; color:#666; cursor:pointer;">ABORT</button>
+            <button onclick="sendDebug()" style="background:var(--m17-green); border:none; color:black; padding:8px 20px; border-radius:4px; font-weight:bold; cursor:pointer;">TRANSMIT</button>
+        </div>
+    </div>
+</div>
+
+<script>
+    const content = document.getElementById('terminal-content');
+    const input = document.getElementById('userInput');
+    let db;
+
+    // --- DB SETUP ---
+    const request = indexedDB.open("M17_UserCache", 1);
+    request.onupgradeneeded = (e) => {
+        db = e.target.result;
+        if (!db.objectStoreNames.contains("history")) {
+            db.createObjectStore("history", { keyPath: "id", autoIncrement: true });
+        }
+    };
+    request.onsuccess = (e) => { db = e.target.result; };
+
+    function saveToLocal(u, b) {
+        if(!db) return;
+        const tx = db.transaction("history", "readwrite");
+        tx.objectStore("history").add({ timestamp: new Date().toLocaleString(), user: u, bot: b });
+    }
+
+    // --- DEBUG LOGIC ---
+    function openDebug() { document.getElementById('debugModal').style.display = 'flex'; }
+    function closeDebug() { document.getElementById('debugModal').style.display = 'none'; }
+
+    async function sendDebug() {
+        const type = document.getElementById('debugType').value;
+        const msg = document.getElementById('debugMsg').value;
+        if (!msg) return;
+
+        // Mock Transmission - Visual only
+        closeDebug();
+        const loader = document.createElement('div');
+        loader.className = "message thinking";
+        loader.textContent = "Encrypting report and establishing secure uplink...";
+        content.appendChild(loader);
+
+        setTimeout(() => {
+            loader.remove();
+            appendStatic(`<div style="color:var(--m17-green)">[SUCCESS] Report #${Math.floor(Math.random()*9000)+1000} transmitted to developer. Thank you for the data.</div>`);
+            console.log("INTERNAL_DEBUG_LOG:", { type, msg, user_agent: navigator.userAgent });
+            document.getElementById('debugMsg').value = "";
+        }, 1500);
+    }
+
+    // --- COMMAND INTERCEPTOR ---
+    input.addEventListener('keypress', async (e) => {
+        if (e.key === 'Enter' && input.value.trim() !== "") {
+            const rawInput = input.value.trim();
+            const query = rawInput.toLowerCase();
+            input.value = "";
+            
+            appendMessage(`> ${rawInput}`, "user-query");
+
+            if (query === "/help") {
+                appendStatic(`
+                    <div class="help-block">
+                        <div class="help-header">LINEAGE OS COMMANDS</div>
+                        <div><span class="cmd">/new-c</span> - Reset current screen.</div>
+                        <div><span class="cmd">/show-h</span> - View browser history.</div>
+                        <div><span class="cmd">/debug</span> - Submit system error logs.</div>
+                        <div><span class="cmd">/clear</span> - Wipe buffer.</div>
+                    </div>`);
+                return;
+            }
+            if (query === "/debug") { openDebug(); return; }
+            if (query === "/clear") { content.innerHTML = ""; return; }
+            if (query === "/new-c") { content.innerHTML = '<div style="color:var(--m17-green)">[SYSTEM] Session Reset. Logs preserved in history.</div>'; return; }
+            
+            if (query === "/show-h") {
+                const tx = db.transaction("history", "readonly");
+                tx.objectStore("history").getAll().onsuccess = (ev) => {
+                    const logs = ev.target.result;
+                    if (!logs.length) return appendStatic("History empty.");
+                    let html = '<div class="help-block"><b>LOCAL LOG ARCHIVE:</b>';
+                    logs.slice(-5).forEach(l => {
+                        html += `<div style="margin-top:10px; border-bottom:1px solid #333"><small>${l.timestamp}</small><br><b style="color:var(--accent)">YOU:</b> ${l.user}<br><b style="color:var(--m17-green)">M17:</b> ${l.bot}</div>`;
+                    });
+                    appendStatic(html + '</div>');
+                };
+                return;
+            }
+
+            // API CALL
+            const loader = document.createElement('div');
+            loader.className = "message thinking";
+            loader.textContent = "Querying M17 Kernel...";
+            content.appendChild(loader);
+
+            try {
+                const res = await fetch('http://localhost:3000/api/chat', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({ mensahe: rawInput, history: [] })
+                });
+                const data = await res.json();
+                loader.remove();
+                const resDiv = document.createElement('div');
+                resDiv.className = "message m17-response";
+                content.appendChild(resDiv);
+                await typeWriter(data.sagot, resDiv);
+                saveToLocal(rawInput, data.sagot);
+            } catch (err) {
+                loader.textContent = "KERNEL_ERROR: Connection timed out.";
+                loader.style.color = "#ff4444";
+            }
+        }
+    });
+
+    async function typeWriter(t, el) {
+        for (let i = 0; i < t.length; i++) {
+            el.textContent += t.charAt(i);
+            window.scrollTo(0, document.body.scrollHeight);
+            await new Promise(r => setTimeout(r, 10));
+        }
+    }
+    function appendMessage(t, c) {
+        const d = document.createElement('div'); d.className = `message ${c}`; d.textContent = t;
+        content.appendChild(d); window.scrollTo(0, document.body.scrollHeight);
+    }
+    function appendStatic(h) {
+        const d = document.createElement('div'); d.className = "message"; d.innerHTML = h;
+        content.appendChild(d); window.scrollTo(0, document.body.scrollHeight);
+    }
+</script>
+</body>
+</html>
