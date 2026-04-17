@@ -194,8 +194,8 @@
             content.appendChild(loader);
 
             try {
-                const res = await fetch('http://localhost:3000/api/chat', {
-                    method: 'POST',
+                 const res = await fetch('/api/chat', { // <--- CHANGE TO THIS
+                     method: 'POST',
                     headers: {'Content-Type': 'application/json'},
                     body: JSON.stringify({ mensahe: rawInput, history: [] })
                 });
