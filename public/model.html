@@ -1,0 +1,343 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>M17_BIOS_v2.6_SETUP_UTILITY</title>
+    <style>
+        :root { 
+            --bios-bg: #0000aa; 
+            --bios-text: #ffffff; 
+            --bios-high: #ffff55; 
+            --bios-gray: #aaaaaa; 
+            --m17-green: #00ff88; 
+            --bios-cyan: #55ffff;
+            --bios-red: #ff5555;
+        }
+
+        /* CRT SCANLINE OVERLAY */
+        body::after {
+            content: " ";
+            display: block;
+            position: absolute;
+            top: 0; left: 0; bottom: 0; right: 0;
+            background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.1) 50%), 
+                        linear-gradient(90deg, rgba(255, 0, 0, 0.03), rgba(0, 255, 0, 0.01), rgba(0, 0, 255, 0.03));
+            z-index: 1000;
+            background-size: 100% 3px, 3px 100%;
+            pointer-events: none;
+        }
+
+        body { 
+            background: #000; 
+            color: var(--bios-text); 
+            font-family: 'Courier New', Courier, monospace;
+            display: flex; 
+            align-items: center; 
+            justify-content: center; 
+            height: 100vh; 
+            margin: 0; 
+            text-transform: uppercase; 
+            overflow: hidden;
+        }
+
+        #donut {
+            position: fixed; 
+            top: 0; left: 0; width: 100%; height: 100%;
+            color: rgba(255, 255, 255, 0.08); 
+            font-size: 9px; 
+            line-height: 9px;
+            white-space: pre; 
+            pointer-events: none; 
+            z-index: -1;
+            display: flex; 
+            align-items: center; 
+            justify-content: center;
+        }
+
+        .bios-window { 
+            width: 980px; 
+            height: 650px; 
+            background: var(--bios-bg);
+            border: 4px double var(--bios-text); 
+            position: relative; 
+            box-shadow: 25px 25px 0px #000;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .top-banner { 
+            background: var(--bios-gray); 
+            color: #000; 
+            text-align: center; 
+            padding: 10px; 
+            font-weight: bold; 
+            border-bottom: 2px solid var(--bios-text);
+            font-size: 18px;
+            letter-spacing: 3px;
+        }
+
+        .sub-nav {
+            background: var(--bios-gray);
+            color: #000;
+            display: flex;
+            gap: 40px;
+            padding: 4px 30px;
+            font-size: 14px;
+            border-bottom: 2px solid var(--bios-text);
+        }
+
+        .main-layout { display: flex; flex: 1; overflow: hidden; }
+
+        .left-menu { 
+            width: 65%; 
+            border-right: 2px solid var(--bios-text); 
+            padding: 30px; 
+            display: flex;
+            flex-direction: column;
+        }
+
+        .right-info { 
+            width: 35%; 
+            padding: 30px; 
+            font-size: 14px; 
+            color: var(--bios-gray); 
+            background: rgba(0,0,0,0.1);
+        }
+
+        .menu-item { 
+            padding: 8px 15px; 
+            margin-bottom: 8px; 
+            display: flex; 
+            justify-content: space-between; 
+            border: 1px solid transparent;
+        }
+
+        .menu-item.selected { 
+            background: var(--bios-text); 
+            color: var(--bios-bg); 
+            border: 1px dashed var(--bios-bg);
+        }
+
+        .status-tag { 
+            font-weight: bold; 
+        }
+
+        .tag-enabled { color: var(--bios-high); }
+        .tag-disabled { color: var(--bios-red); opacity: 0.6; }
+        .selected .status-tag { color: var(--bios-bg); }
+
+        .hardware-monitor {
+            margin-top: auto;
+            border-top: 1px solid var(--bios-text);
+            padding-top: 20px;
+            font-size: 11px;
+            line-height: 1.6;
+            color: var(--bios-cyan);
+        }
+
+        .footer-bar { 
+            height: 40px;
+            border-top: 2px solid var(--bios-text); 
+            padding: 0 20px; 
+            font-size: 13px; 
+            display: flex; 
+            align-items: center;
+            justify-content: space-between;
+            background: var(--bios-bg);
+        }
+
+        #boot-sequence { 
+            display: none; 
+            position: fixed; 
+            top: 0; left: 0; width: 100%; height: 100%; 
+            background: #000; 
+            color: var(--m17-green); 
+            padding: 80px; 
+            font-size: 22px; 
+            z-index: 2000; 
+            font-weight: bold;
+        }
+
+        .blink { animation: flash 0.8s step-start infinite; }
+        @keyframes flash { 50% { opacity: 0; } }
+    </style>
+</head>
+<body>
+
+<pre id="donut"></pre>
+
+<div id="boot-sequence">
+    <div id="console-output"></div>
+</div>
+
+<div class="bios-window">
+    <div class="top-banner">AWARD MODULAR BIOS v6.00PG - LINEAGE KERNEL SETUP</div>
+    <div class="sub-nav">
+        <span>[ MAIN ]</span>
+        <span>IDE CONFIG</span>
+        <span>CHIPSET</span>
+        <span>POWER</span>
+        <span>BOOT</span>
+        <span>EXIT</span>
+    </div>
+    
+    <div class="main-layout">
+        <div class="left-menu">
+            <div style="color: var(--bios-high); margin-bottom: 20px; font-size: 16px;">
+                KERNEL ARCHITECTURE SELECTION:
+            </div>
+            
+            <div class="menu-item" data-id="lineage-vision" data-help="&gt; MODULE: VISION_ENGINE<br>&gt; TYPE: MULTIMODAL TENSOR<br>&gt; USE: SPATIAL ANALYSIS & VISION MAPPING.<br>&gt; STATUS: OK.">
+                <span>LINEAGE VISION ENGINE</span>
+                <span class="status-tag tag-disabled">[DISABLED]</span>
+            </div>
+            
+            <div class="menu-item" data-id="lineage-coder" data-help="&gt; MODULE: CODER_CORE<br>&gt; TYPE: SYNTAX RECONSTRUCTOR<br>&gt; USE: LOGIC REFACTORING & DEBUGGING.<br>&gt; STATUS: OK.">
+                <span>LINEAGE CODER CORE</span>
+                <span class="status-tag tag-disabled">[DISABLED]</span>
+            </div>
+
+            <div class="menu-item" data-id="lineage-generative" data-help="&gt; MODULE: GEN_ARCHITECTURE<br>&gt; TYPE: CREATIVE SYNTHESIS<br>&gt; USE: LARGE LANGUAGE GENERATION & BRAINSTORMING.<br>&gt; STATUS: NEW_MODULE.">
+                <span>LINEAGE GENERATIVE</span>
+                <span class="status-tag tag-disabled">[DISABLED]</span>
+            </div>
+
+            <div class="hardware-monitor">
+                CPU: M17 MULTI-CORE @ 4.2GHz | VCORE: 1.25V<br>
+                DRAM: 32768MB (DDR4-3200) | CAS: 16-18-18-36<br>
+                PRIMARY DISK: LINEAGE-SSD-512G (NVMe Gen4)
+                <div style="color: var(--bios-high); font-size: 9px; margin-top: 5px;">
+                    DETECTING PCI DEVICES... DONE<br>
+                    INITIALIZING ACPI CONTROLLER... DONE
+                </div>
+            </div>
+        </div>
+
+        <div class="right-info">
+            <div style="color: var(--bios-high); border-bottom: 1px solid var(--bios-gray); padding-bottom: 5px; margin-bottom: 15px;">
+                ITEM SPECIFIC HELP
+            </div>
+            <div id="help-content">
+                USE ↑↓ TO NAVIGATE.<br><br>
+                USE [+/-] TO TOGGLE KERNEL STATUS.<br><br>
+                ONLY ONE KERNEL CAN BE [ENABLED] AT A TIME.
+            </div>
+        </div>
+    </div>
+
+    <div class="footer-bar">
+        <span>F1: HELP</span>
+        <span>↑↓: SELECT</span>
+        <span>+/-: MODIFY</span>
+        <span>F10: SAVE & EXIT</span>
+    </div>
+</div>
+
+<script>
+    // --- ROTATING DONUT ASCII ---
+    const pre = document.getElementById('donut');
+    let a = 0, b = 0;
+    const draw = () => {
+        let z = [], charArr = [];
+        a += 0.04; b += 0.02;
+        let cA = Math.cos(a), sA = Math.sin(a), cB = Math.cos(b), sB = Math.sin(b);
+        for (let k = 0; k < 1760; k++) {
+            charArr[k] = k % 80 == 79 ? "\n" : " ";
+            z[k] = 0;
+        }
+        for (let j = 0; j < 6.28; j += 0.07) {
+            let ct = Math.cos(j), st = Math.sin(j);
+            for (let i = 0; i < 6.28; i += 0.02) {
+                let sp = Math.sin(i), cp = Math.cos(i),
+                    h = ct + 2, d = 1 / (sp * h * sA + st * cA + 5), t = sp * h * cA - st * sA;
+                let x = Math.floor(40 + 30 * d * (cp * h * cB - t * sB)),
+                    y = Math.floor(12 + 15 * d * (cp * h * sB + t * cB)),
+                    o = x + 80 * y,
+                    p = Math.floor(8 * ((st * sA - sp * ct * cA) * cB - sp * ct * sA - st * cA - cp * ct * sB));
+                if (y < 22 && y >= 0 && x >= 0 && x < 79 && d > z[o]) {
+                    z[o] = d; charArr[o] = ".,-~:;=!*#$@"[p > 0 ? p : 0];
+                }
+            }
+        }
+        pre.innerHTML = charArr.join("");
+    };
+    setInterval(draw, 50);
+
+    // --- SELECTION & TOGGLE LOGIC ---
+    const items = document.querySelectorAll('.menu-item');
+    const helpBox = document.getElementById('help-content');
+    const bootOverlay = document.getElementById('boot-sequence');
+    const output = document.getElementById('console-output');
+    let currentIdx = 0;
+
+    // Load saved kernel on startup
+    const savedKernel = localStorage.getItem('active_kernel') || 'lineage-vision';
+
+    function refreshUI() {
+        items.forEach((item, i) => {
+            item.classList.toggle('selected', i === currentIdx);
+            const tag = item.querySelector('.status-tag');
+            const isEnabled = item.getAttribute('data-id') === localStorage.getItem('active_kernel');
+            
+            if (isEnabled) {
+                tag.innerText = "[ENABLED]";
+                tag.className = "status-tag tag-enabled";
+            } else {
+                tag.innerText = "[DISABLED]";
+                tag.className = "status-tag tag-disabled";
+            }
+
+            if(i === currentIdx) {
+                helpBox.innerHTML = item.getAttribute('data-help');
+            }
+        });
+    }
+
+    // Toggle Logic for +/- keys
+    function toggleKernel() {
+        const selectedID = items[currentIdx].getAttribute('data-id');
+        localStorage.setItem('active_kernel', selectedID);
+        refreshUI();
+    }
+
+    async function startBoot() {
+        const id = localStorage.getItem('active_kernel');
+        bootOverlay.style.display = 'block';
+        const messages = [
+            "AWARD BIOS v6.00PG",
+            "Copyright (C) 2026, Lineage Corp.",
+            "",
+            `Flashing Kernel: ${id.toUpperCase()}`,
+            "Checking DMI Pool Data ........... Success",
+            "Verifying CMOS Checksum ......... OK",
+            "Loading System Resources ........ OK",
+            "Booting OS... <span class='blink'>_</span>"
+        ];
+
+        for(const msg of messages) {
+            output.innerHTML += msg + "<br>";
+            await new Promise(r => setTimeout(r, 400));
+        }
+        setTimeout(() => { window.location.href = "/"; }, 800);
+    }
+
+    window.addEventListener('keydown', (e) => {
+        if (e.key === "ArrowDown") {
+            currentIdx = (currentIdx + 1) % items.length;
+            refreshUI();
+        } else if (e.key === "ArrowUp") {
+            currentIdx = (currentIdx - 1 + items.length) % items.length;
+            refreshUI();
+        } else if (e.key === "+" || e.key === "-" || e.key === "=") {
+            toggleKernel();
+        } else if (e.key === "Enter" || e.key === "F10") {
+            startBoot();
+        }
+    });
+
+    // Initialize UI on load
+    if(!localStorage.getItem('active_kernel')) localStorage.setItem('active_kernel', 'lineage-vision');
+    refreshUI();
+</script>
+</body>
+</html>
