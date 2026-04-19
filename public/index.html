@@ -4,49 +4,165 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     
-    <title>Lineage</title>
+    <title>Lineage - Cute Edition</title>
     <link rel="icon" type="image/png" href="https://i.postimg.cc/mgv0gWYz/logo.png">
 
     <style>
-        :root { --bg: #0d1117; --text: #c9d1d9; --accent: #58a6ff; --input-bg: #161b22; --border: #30363d; --m17-green: #00ff88; --warning: #d29922; }
-        body { background: var(--bg); color: var(--text); font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif; margin: 0; padding: 40px; display: flex; flex-direction: column; align-items: center; min-height: 100vh; }
+        :root { 
+            --bg: #0d1117; --text: #c9d1d9; --accent: #58a6ff; 
+            --input-bg: #161b22; --border: #30363d; --m17-green: #00ff88; 
+            --warning: #d29922; --error: #f85149; --bot-shadow: rgba(0, 255, 136, 0.4); 
+            --bot-angry: rgba(248, 81, 73, 0.6);
+        }
         
+        /* REMOVED GLOBAL GLITCH - KEPT UTILITY ANIMATIONS */
+        @keyframes scanline { 0% { bottom: 100%; } 80% { bottom: 100%; } 100% { bottom: 0%; } }
+        @keyframes flicker { 
+            0% { opacity: 0.97; } 5% { opacity: 0.9; } 10% { opacity: 0.98; } 15% { opacity: 0.9; } 20% { opacity: 0.99; } 100% { opacity: 1; } 
+        }
+
+        body { 
+            background: var(--bg); color: var(--text); 
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif; 
+            margin: 0; padding: 0; display: flex; flex-direction: row; min-height: 100vh; overflow-x: hidden; position: relative;
+            user-select: none; /* Prevents text selection while dragging bot */
+        }
+
+        body::before {
+            content: " "; display: block; position: fixed; top: 0; left: 0; bottom: 0; right: 0;
+            background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.05) 50%);
+            z-index: 100; background-size: 100% 4px; pointer-events: none;
+        }
+        
+        /* BOX BOT COMPONENT */
+        #assistant-bot {
+            position: fixed; bottom: 50px; right: 50px; width: 80px; height: 80px;
+            z-index: 150; transition: transform 0.1s ease-out;
+            display: flex; flex-direction: column; align-items: center; cursor: grab;
+            pointer-events: auto;
+        }
+        #assistant-bot:active { cursor: grabbing; }
+
+        .bot-body {
+            width: 70px; height: 70px; background: #1c2128;
+            border: 3px solid var(--m17-green); border-radius: 12px; position: relative;
+            display: flex; flex-direction: column; justify-content: center; align-items: center;
+            box-shadow: 0 0 20px var(--bot-shadow); transition: all 0.3s ease;
+        }
+        
+        .bot-body.angry { border-color: var(--error); box-shadow: 0 0 25px var(--bot-angry); }
+
+        .bot-face {
+            display: flex; justify-content: center; align-items: center;
+            font-family: "Courier New", monospace; font-weight: bold; font-size: 24px;
+            color: var(--m17-green); text-shadow: 0 0 8px var(--m17-green);
+            transition: color 0.3s;
+        }
+        .bot-body.angry .bot-face { color: var(--error); text-shadow: 0 0 8px var(--error); }
+
+        .bot-antenna {
+            width: 4px; height: 10px; background: var(--m17-green); position: absolute;
+            top: -12px; left: 50%; transform: translateX(-50%); border-radius: 2px;
+        }
+        .bot-antenna::after {
+            content: ''; position: absolute; top: -5px; left: -3px; width: 10px; height: 10px;
+            background: var(--m17-green); border-radius: 50%; box-shadow: 0 0 10px var(--m17-green);
+        }
+        .bot-body.angry .bot-antenna, .bot-body.angry .bot-antenna::after { background: var(--error); }
+
+        .bot-speech {
+            position: absolute; bottom: 95px; background: white; color: black;
+            padding: 8px 15px; border-radius: 18px 18px 18px 2px; font-weight: bold;
+            font-size: 12px; opacity: 0; transform: scale(0.5); transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            box-shadow: 0 4px 15px rgba(0,0,0,0.3); min-width: 80px; text-align: center; pointer-events: none;
+        }
+        .bot-speech.active { opacity: 1; transform: scale(1); }
+        
+        /* Layout Structure */
+        #donut-sidebar { 
+            width: 320px; border-right: 1px solid var(--border); display: flex; 
+            flex-direction: column; align-items: center; background: #090c10; 
+            position: fixed; height: 100vh; left: 0; top: 0; z-index: 5; 
+            overflow-y: auto; padding-top: 20px; 
+        }
+        
+        #main-layout { margin-left: 320px; flex: 1; padding: 40px; display: flex; flex-direction: column; align-items: center; width: calc(100% - 320px); position: relative; }
+
         header { display: flex; justify-content: space-between; align-items: flex-start; width: 100%; max-width: 1000px; border-bottom: 1px solid var(--border); padding-bottom: 25px; margin-bottom: 40px; }
-        .brand-text { font-size: 32px; font-weight: 800; color: white; letter-spacing: -1px; }
+        .brand-text { font-size: 32px; font-weight: 800; color: white; letter-spacing: -1px; position: relative; }
         .version-tag { color: #8b949e; font-family: "SFMono-Regular", monospace; font-size: 14px; margin-top: 8px; }
 
         .ascii-row { display: flex; gap: 30px; align-items: center; }
         pre { font-size: 8px; line-height: 1.1; color: var(--m17-green); margin: 0; text-shadow: 0 0 15px rgba(0, 255, 136, 0.3); font-weight: bold; }
 
-        #terminal-content { width: 100%; max-width: 1000px; font-family: "SFMono-Regular", Consolas, monospace; font-size: 14px; line-height: 1.6; padding-bottom: 100px; }
+        #terminal-content { width: 100%; max-width: 1000px; font-family: "SFMono-Regular", Consolas, monospace; font-size: 14px; line-height: 1.6; padding-bottom: 100px; user-select: text; }
         
         .input-container { width: 100%; max-width: 1000px; background: var(--input-bg); border: 1px solid var(--border); border-radius: 8px; padding: 16px 20px; display: flex; align-items: center; position: sticky; bottom: 20px; box-shadow: 0 10px 30px rgba(0,0,0,0.5); z-index: 10; }
         .prompt-symbol { color: var(--accent); margin-right: 15px; font-weight: bold; font-size: 18px; }
-        input { background: transparent; border: none; color: white; width: 100%; outline: none; font-family: inherit; font-size: 16px; }
+        input { background: transparent; border: none; color: white; width: 100%; outline: none; font-family: inherit; font-size: 16px; user-select: text; }
 
         .message { margin: 25px 0; }
         .user-query { color: white; font-weight: 600; opacity: 0.9; }
         .m17-response { color: var(--text); padding-left: 24px; border-left: 3px solid var(--border); white-space: pre-wrap; }
         
-        /* Debug Modal Styling */
-        #debugModal { display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.85); z-index:100; justify-content:center; align-items:center; backdrop-filter: blur(4px); }
+        #donut-pre { font-family: monospace; font-size: 9px; line-height: 8px; color: var(--accent); text-shadow: 0 0 5px rgba(88, 166, 255, 0.5); margin-top: 10px; }
+        .sidebar-label { color: #8b949e; font-family: "SFMono-Regular", monospace; font-size: 10px; margin: 10px 0; letter-spacing: 2px; text-transform: uppercase; }
+
+        .log-window { width: 280px; background: #000; border: 1px solid var(--border); border-radius: 4px; margin-top: 20px; font-family: "SFMono-Regular", monospace; font-size: 10px; height: 300px; display: flex; flex-direction: column; overflow: hidden; box-shadow: inset 0 0 10px #000; position: relative; }
+        .log-window::after { content: ""; position: absolute; top: 0; left: 0; width: 100%; height: 2px; background: rgba(0, 255, 136, 0.1); animation: scanline 4s linear infinite; }
+        .log-header { background: #161b22; padding: 5px 10px; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; }
+        .log-status-dot { width: 6px; height: 6px; background: var(--m17-green); border-radius: 50%; animation: pulse 1.5s infinite; }
+        #log-body { flex: 1; padding: 10px; overflow-y: auto; color: #8b949e; line-height: 1.4; word-break: break-all; }
+        .log-entry { margin-bottom: 8px; border-left: 1px solid #333; padding-left: 5px; }
+        .log-ts { color: #58a6ff; font-size: 9px; }
+        .log-meta { color: var(--m17-green); font-weight: bold; }
+        .log-err { color: var(--error); }
+
+        @keyframes pulse { 0% { opacity: 1; } 50% { opacity: 0.3; } 100% { opacity: 1; } }
+
+        #debugModal { display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.85); z-index:200; justify-content:center; align-items:center; backdrop-filter: blur(4px); }
         .modal-content { background: var(--input-bg); border: 1px solid var(--border); padding: 30px; border-radius: 8px; width: 90%; max-width: 500px; box-shadow: 0 20px 50px rgba(0,0,0,0.5); }
         .debug-input { width: 100%; background: #0d1117; border: 1px solid var(--border); color: white; padding: 10px; margin-bottom: 15px; border-radius: 4px; font-family: inherit; }
-
         .help-block { background: #1c2128; border: 1px solid var(--border); padding: 20px; border-radius: 6px; color: var(--text); margin: 15px 0; }
         .cmd { color: var(--accent); min-width: 100px; font-weight: bold; display: inline-block; }
         .thinking { color: #8b949e; font-style: italic; margin-left: 10px; font-size: 13px; }
+
+        @media (max-width: 900px) { #donut-sidebar { display: none; } #main-layout { margin-left: 0; width: 100%; } }
     </style>
 </head>
 <body oncontextmenu="return false;">
 
-<header>
-    <div class="brand-box">
-        <div class="brand-text">M17 Terminal</div>
-        <div class="version-tag">CLI v0.9.8 • Developer: mikec.pascua</div>
+<div id="assistant-bot">
+    <div id="bot-speech" class="bot-speech">Hello!</div>
+    <div class="bot-body" id="bot-core">
+        <div class="bot-antenna"></div>
+        <div class="bot-face" id="bot-face">o _ o</div>
     </div>
-    <div class="ascii-row">
-        <pre>                                       
+</div>
+
+<div id="donut-sidebar">
+    <div class="sidebar-label">Visualizer.OS</div>
+    <pre id="donut-pre"></pre>
+    <div class="sidebar-label">Live_Server_Logs</div>
+    <div class="log-window">
+        <div class="log-header">
+            <span style="color:white; font-size:9px;">UPLINK: ACTIVE</span>
+            <div class="log-status-dot"></div>
+        </div>
+        <div id="log-body">
+            <div class="log-entry"><span class="log-ts">[00:00:00]</span> Kernel established.</div>
+        </div>
+    </div>
+</div>
+
+<div id="main-layout">
+    <header>
+        <div class="brand-box">
+            <div class="brand-text">M17 Terminal</div>
+            <div class="version-tag">CLI v0.9.9 • Bot: Boxy-M17</div>
+        </div>
+        <div class="ascii-row">
+            <pre>                                       
  ▄▄         ▄▄▄▄▄▄   ▄▄▄   ▄▄  ▄▄▄▄▄▄▄▄     ▄▄        ▄▄▄▄   ▄▄▄▄▄▄▄▄ 
  ██         ▀▀██▀▀   ███   ██  ██▀▀▀▀▀▀     ████     ██▀▀▀▀█  ██▀▀▀▀▀▀ 
  ██           ██     ██▀█  ██  ██           ████    ██        ██       
@@ -67,37 +183,32 @@
  .#*..-@@@%...#@@@@@=...@@@%.  *%.  .=%.
  .#*..-@@@%....%@@@#....@@@%.  *%. .:@:.
  .#*..:+++=....:++=.....+++=...*%..-%:.</pre>
-    </div>
-</header>
 
-<div id="terminal-content">
-    <div style="color: #8b949e; margin-bottom: 25px; border-left: 2px solid var(--m17-green); padding-left: 15px;">
-        Welcome to the Lineage Kernel. Interaction initialized.
-        <br>Type <span style="color:var(--accent)">/help</span> for commands.
-    </div>
-</div>
+        </div>
+    </header>
 
-<div class="input-container">
-    <span class="prompt-symbol">></span>
-    <input type="text" id="userInput" placeholder="Type a message or /command..." autofocus autocomplete="off">
+    <div id="terminal-content">
+        <div id="welcome-msg" style="color: #8b949e; margin-bottom: 25px; border-left: 2px solid var(--m17-green); padding-left: 15px;">
+            Welcome to the Lineage Kernel. Boxy initialized.
+            <br>Type <span style="color:var(--accent)">/help</span> for commands.
+        </div>
+    </div>
+
+    <div class="input-container">
+        <span class="prompt-symbol">></span>
+        <input type="text" id="userInput" placeholder="Type a message..." autofocus autocomplete="off">
+    </div>
 </div>
 
 <div id="debugModal">
     <div class="modal-content">
         <h2 style="margin-top:0; color:var(--m17-green); font-size: 18px;">[SYSTEM_DEBUG_REPORT]</h2>
-        <p style="font-size:12px; color:#8b949e; margin-bottom:20px;">Transmit error logs directly to developer terminal.</p>
-        
-        <label style="display:block; font-size:11px; margin-bottom:5px; color:var(--accent);">REPORT_TYPE</label>
         <select id="debugType" class="debug-input">
-            <option value="Logic Panic">Logic Panic (AI Behavior)</option>
-            <option value="Visual Artifact">Visual Artifact (UI Bug)</option>
-            <option value="Kernel Timeout">Kernel Timeout (Connection)</option>
+            <option value="Logic Panic">Logic Panic</option>
+            <option value="Visual Artifact">Visual Artifact</option>
         </select>
-
-        <label style="display:block; font-size:11px; margin-bottom:5px; color:var(--accent);">ERROR_LOG_DETAILS</label>
-        <textarea id="debugMsg" rows="5" class="debug-input" placeholder="Awaiting input data..." style="resize:none;"></textarea>
-        
-        <div style="display:flex; gap:15px; justify-content:flex-end; margin-top:10px;">
+        <textarea id="debugMsg" rows="5" class="debug-input" placeholder="Awaiting input data..."></textarea>
+        <div style="display:flex; gap:15px; justify-content:flex-end;">
             <button onclick="closeDebug()" style="background:transparent; border:none; color:#666; cursor:pointer;">ABORT</button>
             <button onclick="sendDebug()" style="background:var(--m17-green); border:none; color:black; padding:8px 20px; border-radius:4px; font-weight:bold; cursor:pointer;">TRANSMIT</button>
         </div>
@@ -105,9 +216,19 @@
 </div>
 
 <script>
-    const content = document.getElementById('terminal-content');
-    const input = document.getElementById('userInput');
-    let db;
+    // --- ADVANCED BOX BOT LOGIC ---
+    const bot = document.getElementById('assistant-bot');
+const botCore = document.getElementById('bot-core');
+const botFace = document.getElementById('bot-face');
+const speech = document.getElementById('bot-speech');
+const input = document.getElementById('userInput');
+
+let isDragging = false;
+let isAngry = false;
+let mouseX = 0, mouseY = 0;
+let botX = window.innerWidth - 150, botY = window.innerHeight - 150; 
+
+let db;
 
     // --- DB SETUP ---
     const request = indexedDB.open("M17_UserCache", 1);
@@ -125,30 +246,6 @@
         tx.objectStore("history").add({ timestamp: new Date().toLocaleString(), user: u, bot: b });
     }
 
-    // --- DEBUG LOGIC ---
-    function openDebug() { document.getElementById('debugModal').style.display = 'flex'; }
-    function closeDebug() { document.getElementById('debugModal').style.display = 'none'; }
-
-    async function sendDebug() {
-        const type = document.getElementById('debugType').value;
-        const msg = document.getElementById('debugMsg').value;
-        if (!msg) return;
-
-        // Mock Transmission - Visual only
-        closeDebug();
-        const loader = document.createElement('div');
-        loader.className = "message thinking";
-        loader.textContent = "Encrypting report and establishing secure uplink...";
-        content.appendChild(loader);
-
-        setTimeout(() => {
-            loader.remove();
-            appendStatic(`<div style="color:var(--m17-green)">[SUCCESS] Report #${Math.floor(Math.random()*9000)+1000} transmitted to developer. Thank you for the data.</div>`);
-            console.log("INTERNAL_DEBUG_LOG:", { type, msg, user_agent: navigator.userAgent });
-            document.getElementById('debugMsg').value = "";
-        }, 1500);
-    }
-
     // --- COMMAND INTERCEPTOR ---
     input.addEventListener('keypress', async (e) => {
         if (e.key === 'Enter' && input.value.trim() !== "") {
@@ -157,11 +254,15 @@
             input.value = "";
             
             appendMessage(`> ${rawInput}`, "user-query");
+            if (typeof botSay === "function") botSay("Thinking...", 'happy', 1500);
 
+            // --- COMMANDS HANDLING ---
             if (query === "/help") {
                 appendStatic(`
                     <div class="help-block">
                         <div class="help-header">LINEAGE OS COMMANDS</div>
+                        <div><span class="cmd">/switch-brain</span> - Enter BIOS to toggle AI Kernels.</div>
+                        <div><span class="cmd">/code-engine</span> - Initialize the Web-Based IDE.</div>
                         <div><span class="cmd">/new-c</span> - Reset current screen.</div>
                         <div><span class="cmd">/show-h</span> - View browser history.</div>
                         <div><span class="cmd">/debug</span> - Submit system error logs.</div>
@@ -169,9 +270,22 @@
                     </div>`);
                 return;
             }
+
+            if (query === "/switch-brain") {
+                appendStatic(`<div style="color:var(--warning)">[SYSTEM] LOADING BIOS SETUP...</div>`);
+                setTimeout(() => { window.location.href = '/bios'; }, 800);
+                return;
+            }
+
+            if (query === "/code-engine") {
+                appendStatic(`<div style="color:var(--m17-green)">[SYSTEM] Deploying IDE...</div>`);
+                setTimeout(() => { window.location.href = '/code-engine'; }, 800);
+                return;
+            }
+
             if (query === "/debug") { openDebug(); return; }
             if (query === "/clear") { content.innerHTML = ""; return; }
-            if (query === "/new-c") { content.innerHTML = '<div style="color:var(--m17-green)">[SYSTEM] Session Reset. Logs preserved in history.</div>'; return; }
+            if (query === "/new-c") { content.innerHTML = '<div style="color:var(--m17-green)">[SYSTEM] Session Reset.</div>'; return; }
             
             if (query === "/show-h") {
                 const tx = db.transaction("history", "readonly");
@@ -187,28 +301,268 @@
                 return;
             }
 
-            // API CALL
+            // --- BRAIN COMMUNICATION (FETCH) ---
             const loader = document.createElement('div');
             loader.className = "message thinking";
             loader.textContent = "Querying M17 Kernel...";
             content.appendChild(loader);
 
             try {
-                 const res = await fetch('/api/chat', { // <--- CHANGE TO THIS
-                     method: 'POST',
+                const activeKernel = localStorage.getItem('active_kernel') || 'lineage-vision';
+
+                const res = await fetch('/api/chat', { 
+                    method: 'POST',
                     headers: {'Content-Type': 'application/json'},
-                    body: JSON.stringify({ mensahe: rawInput, history: [] })
+                    body: JSON.stringify({ 
+                        mensahe: rawInput, 
+                        history: [],
+                        model: activeKernel 
+                    })
                 });
+                
                 const data = await res.json();
                 loader.remove();
+                
                 const resDiv = document.createElement('div');
                 resDiv.className = "message m17-response";
                 content.appendChild(resDiv);
-                await typeWriter(data.sagot, resDiv);
+                
+                if (typeof typeWriter === "function") {
+                    await typeWriter(data.sagot, resDiv);
+                } else {
+                    resDiv.textContent = data.sagot;
+                }
+                
                 saveToLocal(rawInput, data.sagot);
             } catch (err) {
                 loader.textContent = "KERNEL_ERROR: Connection timed out.";
                 loader.style.color = "#ff4444";
+            }
+        }
+    });
+
+// 🔥 FIXED FACES (no more sideways look)
+const FACES = {
+    neutral: "•_•",
+    happy: "^-^",
+    sad: "T_T",
+    angry: ">_<",
+    surprised: "O_O",
+    thinking: "-_-"
+};
+
+function setFace(face) {
+    botFace.textContent = FACES[face] || FACES.neutral;
+}
+
+// 🧠 smarter speech handler
+function botSay(text, face = 'neutral', duration = 2500) {
+    speech.textContent = text;
+    speech.classList.add('active');
+
+    setFace(face);
+
+    if (face === 'angry') botCore.classList.add('angry');
+    else botCore.classList.remove('angry');
+
+    clearTimeout(botSay._t);
+    botSay._t = setTimeout(() => {
+        speech.classList.remove('active');
+        if (!isDragging && !isAngry) setFace('neutral');
+    }, duration);
+}
+
+// ----------------------
+// DRAGGING
+// ----------------------
+bot.addEventListener('mousedown', () => {
+    isDragging = true;
+    setFace('sad');
+    botSay("Hey... easy!", 'sad', 1200);
+});
+
+window.addEventListener('mousemove', (e) => {
+    mouseX = e.clientX;
+    mouseY = e.clientY;
+
+    if (isDragging) {
+        botX = mouseX - 40;
+        botY = mouseY - 40;
+        updateBotPos();
+    }
+});
+
+window.addEventListener('mouseup', () => {
+    if (isDragging) {
+        isDragging = false;
+        botSay("Okay okay...", 'neutral', 1000);
+    }
+});
+
+// ----------------------
+// ANGRY MODE
+// ----------------------
+bot.addEventListener('dblclick', () => {
+    isAngry = true;
+    botSay("STOP CLICKING ME.", 'angry', 3000);
+    addLog("BOT_EMOTION: ANGRY_MODE", 'err');
+
+    setTimeout(() => {
+        isAngry = false;
+        botSay("...I'm calm now.", 'neutral', 2000);
+        botCore.classList.remove('angry');
+    }, 4000);
+});
+
+// ----------------------
+// POSITION UPDATE
+// ----------------------
+function updateBotPos() {
+    bot.style.left = `${botX}px`;
+    bot.style.top = `${botY}px`;
+}
+
+// ----------------------
+// PHYSICS LOOP (SMOOTHER)
+// ----------------------
+function physicsLoop() {
+    if (!isDragging) {
+        if (isAngry) {
+            // chase cursor smoothly
+            let dx = mouseX - (botX + 40);
+            let dy = mouseY - (botY + 40);
+            botX += dx * 0.06;
+            botY += dy * 0.06;
+        } else {
+            // smooth floating idle
+            botY += Math.sin(Date.now() / 600) * 0.3;
+        }
+
+        updateBotPos();
+    }
+
+    requestAnimationFrame(physicsLoop);
+}
+physicsLoop();
+
+// ----------------------
+// INPUT INTERACTION 🔥
+// ----------------------
+
+// typing reaction
+input.addEventListener('input', (e) => {
+    if (e.target.value.length > 0 && !isAngry) {
+        setFace('thinking');
+    }
+});
+
+// focus reaction (cleaner message)
+input.addEventListener('focus', () => {
+    if (!isAngry) {
+        botSay("What are we building?", 'happy', 2000);
+    }
+});
+
+// 🔥 CLICK → MOVE BOT TO INPUT
+input.addEventListener('click', () => {
+    const rect = input.getBoundingClientRect();
+
+    const targetX = rect.left + rect.width / 2 - 40;
+    const targetY = rect.top - 110;
+
+    // smooth glide
+    let step = 0;
+    const animate = () => {
+        botX += (targetX - botX) * 0.1;
+        botY += (targetY - botY) * 0.1;
+
+        updateBotPos();
+
+        if (Math.abs(botX - targetX) > 1 || Math.abs(botY - targetY) > 1) {
+            requestAnimationFrame(animate);
+        }
+    };
+
+    animate();
+
+    if (!isAngry) {
+        botSay("What are we building?", 'happy', 2500);
+    }
+});
+
+    // --- LOGGING ENGINE ---
+    const logBody = document.getElementById('log-body');
+    function addLog(msg, type = 'info') {
+        const time = new Date().toLocaleTimeString('en-GB', { hour12: false });
+        const div = document.createElement('div');
+        div.className = 'log-entry';
+        if (type === 'err') div.classList.add('log-err');
+        div.innerHTML = `<span class="log-ts">[${time}]</span> ${msg}`;
+        logBody.appendChild(div);
+        logBody.scrollTop = logBody.scrollHeight;
+    }
+
+    // --- DONUT LOGIC ---
+    (function() {
+        let pre = document.getElementById('donut-pre');
+        let A = 0, B = 0;
+        const asciidonut = () => {
+            let b = [], z = []; A += 0.07; B += 0.03;
+            let cA = Math.cos(A), sA = Math.sin(A), cB = Math.cos(B), sB = Math.sin(B);
+            for (let k = 0; k < 1760; k++) { b[k] = k % 80 == 79 ? "\n" : " "; z[k] = 0; }
+            for (let j = 0; j < 6.28; j += 0.07) {
+                let ct = Math.cos(j), st = Math.sin(j);
+                for (let i = 0; i < 6.28; i += 0.02) {
+                    let sp = Math.sin(i), cp = Math.cos(i), h = ct + 2, D = 1 / (sp * h * sA + st * cA + 5), t = sp * h * cA - st * sA;
+                    let x = Math.floor(40 + 30 * D * (cp * h * cB - t * sB)), y = Math.floor(12 + 15 * D * (cp * h * sB + t * cB)), o = x + 80 * y,
+                        N = Math.floor(8 * ((st * sA - sp * ct * cA) * cB - sp * ct * sA - st * cA - cp * ct * sB));
+                    if (y < 22 && y >= 0 && x >= 0 && x < 79 && D > z[o]) { z[o] = D; b[o] = ".,-~:;=!*#$@"[N > 0 ? N : 0]; }
+                }
+            }
+            pre.innerHTML = b.join("");
+        };
+        setInterval(asciidonut, 50);
+    })();
+
+    // --- TERMINAL ENGINE ---
+    const content = document.getElementById('terminal-content');
+    input.addEventListener('keypress', async (e) => {
+        if (e.key === 'Enter' && input.value.trim() !== "") {
+            const rawInput = input.value.trim();
+            const query = rawInput.toLowerCase();
+            input.value = "";
+            appendMessage(`> ${rawInput}`, "user-query");
+            addLog(`USER_EXEC: ${rawInput}`);
+            botSay("Thinking...", 'happy', 2000);
+
+            if (query === "/help") {
+                appendStatic(`<div class="help-block"><b>COMMANDS:</b> /switch-brain, /code-engine, /new-c, /show-h, /debug, /clear</div>`);
+                return;
+            }
+            if (query === "/clear") { content.innerHTML = ""; return; }
+
+            const loader = document.createElement('div');
+            loader.className = "message thinking";
+            loader.textContent = "Querying M17 Kernel...";
+            content.appendChild(loader);
+
+            try {
+                const res = await fetch('/api/chat', { 
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({ mensahe: rawInput, history: [], model: 'lineage-vision' })
+                });
+                const data = await res.json();
+                loader.remove();
+                botSay("Got it!", 'happy');
+                const resDiv = document.createElement('div');
+                resDiv.className = "message m17-response";
+                content.appendChild(resDiv);
+                await typeWriter(data.sagot, resDiv);
+            } catch (err) {
+                addLog(`KERNEL_PANIC`, 'err');
+                loader.textContent = "KERNEL_ERROR: Connection timed out.";
+                botSay("Error...", 'sad', 4000);
             }
         }
     });
@@ -220,14 +574,16 @@
             await new Promise(r => setTimeout(r, 10));
         }
     }
+
     function appendMessage(t, c) {
         const d = document.createElement('div'); d.className = `message ${c}`; d.textContent = t;
         content.appendChild(d); window.scrollTo(0, document.body.scrollHeight);
     }
+
     function appendStatic(h) {
         const d = document.createElement('div'); d.className = "message"; d.innerHTML = h;
         content.appendChild(d); window.scrollTo(0, document.body.scrollHeight);
     }
 </script>
 </body>
-</html>
+</html
