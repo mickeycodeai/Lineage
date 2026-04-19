@@ -1,0 +1,435 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Code Engine // Web-Based IDE</title>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/monaco-editor/0.44.0/min/vs/loader.min.js"></script>
+    
+    <style>
+        :root {
+            --bg-darker: #010409; 
+            --bg-main: #0d1117;
+            --accent: #00ff88; 
+            --border: #30363d;
+            --text: #c9d1d9; 
+            --sidebar-w: 260px;
+            --hover: #161b22;
+        }
+
+        body, html { margin: 0; height: 100%; background: var(--bg-main); color: var(--text); font-family: 'Inter', -apple-system, sans-serif; overflow: hidden; }
+        
+        .ide-container { 
+            display: grid; 
+            grid-template-columns: var(--sidebar-w) 1fr; 
+            height: 100vh; 
+        }
+
+        /* Sidebar & Explorer */
+        .sidebar { background: var(--bg-darker); border-right: 1px solid var(--border); display: flex; flex-direction: column; }
+        .sidebar-header { 
+            padding: 12px 16px; 
+            border-bottom: 1px solid var(--border); 
+            display: flex; justify-content: space-between; align-items: center; 
+            font-size: 10px; font-weight: 800; color: #8b949e; letter-spacing: 1.5px; 
+        }
+        
+        .file-tree { padding: 8px; flex-grow: 1; overflow-y: auto; }
+        .tree-node { margin-bottom: 1px; }
+        .tree-item { 
+            display: flex; align-items: center; padding: 4px 8px; cursor: pointer; 
+            border-radius: 4px; font-size: 13px; transition: all 0.15s ease; gap: 10px;
+            color: #8b949e;
+        }
+        .tree-item:hover { background: var(--hover); color: var(--text); }
+        .tree-item i { width: 15px; height: 15px; stroke-width: 1.5; } 
+        
+        .item-actions { margin-left: auto; display: none; gap: 8px; opacity: 0.5; }
+        .tree-item:hover .item-actions { display: flex; }
+        .item-actions i:hover { color: var(--accent); opacity: 1; }
+
+        .indent { margin-left: 18px; border-left: 1px solid #21262d; }
+
+        /* Main Editor/Terminal Wrapper */
+        .editor-section {
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+        }
+
+        #editor-wrapper { 
+            position: relative; 
+            flex-grow: 1; 
+            background: var(--bg-main); 
+            min-height: 100px;
+        }
+        
+        /* RESIZER BAR */
+        #resizer {
+            height: 4px;
+            background: var(--border);
+            cursor: ns-resize;
+            transition: background 0.2s;
+            z-index: 50;
+        }
+        #resizer:hover {
+            background: var(--accent);
+        }
+
+        /* Terminal Styling */
+        #ide-terminal {
+            height: 250px; /* Default height */
+            min-height: 100px;
+            background: #010409;
+            border-top: 1px solid var(--border);
+            display: flex;
+            flex-direction: column;
+            font-family: 'Fira Code', monospace;
+            font-size: 12px;
+        }
+        .terminal-header {
+            background: #161b22;
+            padding: 6px 16px;
+            font-size: 10px;
+            color: #8b949e;
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            justify-content: space-between;
+        }
+        #terminal-output {
+            flex-grow: 1;
+            overflow-y: auto;
+            padding: 10px 16px;
+            white-space: pre-wrap;
+            color: #d1d5db;
+        }
+        .terminal-input-line {
+            display: flex;
+            padding: 8px 16px;
+            gap: 8px;
+            background: #010409;
+        }
+        .prompt { color: var(--accent); font-weight: bold; }
+        #term-input {
+            background: transparent;
+            border: none;
+            color: white;
+            outline: none;
+            flex-grow: 1;
+            font-family: inherit;
+        }
+
+        /* ASCII Welcome Screen */
+        .welcome-screen {
+            position: absolute; inset: 0; z-index: 20;
+            background: var(--bg-main); display: flex; flex-direction: column;
+            align-items: center; justify-content: center; text-align: center;
+        }
+        .welcome-screen pre {
+            color: var(--accent);
+            font-size: 8px;
+            line-height: 1.1;
+            margin-bottom: 30px;
+            font-weight: bold;
+            pointer-events: none;
+            user-select: none;
+        }
+        .welcome-screen p { color: #8b949e; font-size: 12px; letter-spacing: 1px; margin: 5px 0; }
+        .status-ready { color: var(--accent); font-weight: bold; border: 1px solid var(--accent); padding: 2px 8px; border-radius: 4px; font-size: 10px; margin-bottom: 15px; }
+
+        /* Modals */
+        .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.85); display: none; justify-content: center; align-items: center; z-index: 1000; backdrop-filter: blur(8px); }
+        .modal { background: var(--bg-darker); border: 1px solid var(--border); padding: 20px; border-radius: 8px; width: 300px; box-shadow: 0 20px 50px rgba(0,0,0,0.7); }
+        .modal h3 { margin: 0 0 15px 0; font-size: 11px; color: var(--accent); text-transform: uppercase; letter-spacing: 1px; }
+        .modal input { width: 100%; background: #0d1117; border: 1px solid var(--border); color: white; padding: 10px; border-radius: 4px; margin-bottom: 15px; outline: none; box-sizing: border-box; font-family: inherit; }
+        .btn { padding: 6px 12px; border-radius: 4px; cursor: pointer; font-size: 12px; font-weight: 600; border: none; transition: 0.2s; }
+        .btn-confirm { background: var(--accent); color: black; }
+        .btn-cancel { background: transparent; color: #6e7681; }
+    </style>
+</head>
+<body>
+
+<div class="ide-container">
+    <aside class="sidebar">
+        <div class="sidebar-header">
+            <span>EXPLORER</span>
+            <div style="display: flex; gap: 10px;">
+                <i data-lucide="file-plus-2" onclick="promptCreate('file', 'root')" title="New File" style="cursor:pointer; width:14px; stroke-width:2;"></i>
+                <i data-lucide="folder-plus" onclick="promptCreate('folder', 'root')" title="New Folder" style="cursor:pointer; width:14px; stroke-width:2;"></i>
+            </div>
+        </div>
+        <div class="file-tree" id="fileTree"></div>
+    </aside>
+
+    <main class="editor-section">
+        <div id="editor-wrapper">
+            <div class="welcome-screen" id="welcome">
+                <div class="status-ready">KERNEL ONLINE</div>
+                <pre>
+ ██████╗ ██████╗ ██████╗ ███████╗                
+██╔════╝██╔═══██╗██╔══██╗██╔════╝                
+██║     ██║   ██║██║  ██║█████╗                  
+██║     ██║   ██║██║  ██║██╔══╝                  
+╚██████╗╚██████╔╝██████╔╝███████╗                
+ ╚═════╝ ╚═════╝ ╚═════╝ ╚══════╝                
+                                                 
+███████╗███╗   ██╗ ██████╗ ██╗███╗   ██╗███████╗
+██╔════╝████╗  ██║██╔════╝ ██║████╗  ██║██╔════╝
+█████╗  ██╔██╗ ██║██║   ███╗██║██╔██╗ ██║█████╗  
+██╔══╝  ██║╚██╗██║██║   ██║██║██║╚██╗██║██╔══╝  
+███████╗██║ ╚████║╚██████╔╝██║██║ ╚████║███████╗
+╚══════╝╚═╝  ╚═══╝ ╚═════╝ ╚═╝╚═╝  ╚═══╝╚══════╝</pre>
+                <p>Select a file or use the terminal below</p>
+                <p style="font-size: 10px; opacity: 0.5;">Code Engine v1.0.6 • Real-Time Uplink</p>
+            </div>
+            <div id="monaco-editor" style="height: 100%;"></div>
+        </div>
+
+        <div id="resizer"></div>
+
+        <div id="ide-terminal">
+            <div class="terminal-header">
+                <span>M17-KERNEL-TERMINAL (BASH)</span>
+                <span style="opacity: 0.5;">[SERVER_UPLINK]</span>
+            </div>
+            <div id="terminal-output">Welcome to M17 Code Engine. Type 'help' for commands, or ':q' to exit.</div>
+            <div class="terminal-input-line">
+                <span class="prompt">guest@m17:~$</span>
+                <input type="text" id="term-input" autocomplete="off" spellcheck="false" autofocus>
+            </div>
+        </div>
+    </main>
+</div>
+
+<div id="modalOverlay" class="modal-overlay">
+    <div class="modal">
+        <h3 id="modalTitle">Request</h3>
+        <input type="text" id="modalInput" spellcheck="false" autocomplete="off">
+        <div class="modal-btns">
+            <button class="btn btn-cancel" onclick="closeModal()">Cancel</button>
+            <button id="modalConfirm" class="btn btn-confirm">Execute</button>
+        </div>
+    </div>
+</div>
+
+<script>
+    let editor;
+    const welcome = document.getElementById('welcome');
+    const termInput = document.getElementById('term-input');
+    const termOutput = document.getElementById('terminal-output');
+    const terminalDiv = document.getElementById('ide-terminal');
+    const resizer = document.getElementById('resizer');
+    
+    // Initial State (Virtual Sync)
+    let fs = [
+        { id: '1', name: 'main.js', type: 'file', content: 'console.log("M17 Code Engine Ready.");' },
+        { id: '2', name: 'styles', type: 'folder', children: [
+            { id: '3', name: 'theme.css', type: 'file', content: '/* Minimal Theme */' }
+        ]}
+    ];
+
+    require.config({ paths: { 'vs': 'https://cdnjs.cloudflare.com/ajax/libs/monaco-editor/0.44.0/min/vs' }});
+    require(['vs/editor/editor.main'], function() {
+        editor = monaco.editor.create(document.getElementById('monaco-editor'), {
+            theme: 'vs-dark',
+            automaticLayout: true,
+            fontSize: 13,
+            fontFamily: 'Fira Code, monospace',
+            minimap: { enabled: false },
+            scrollbar: { vertical: 'hidden', horizontal: 'hidden' }
+        });
+    });
+
+    // --- RESIZER LOGIC ---
+    let isResizing = false;
+    resizer.addEventListener('mousedown', (e) => {
+        isResizing = true;
+        document.body.style.cursor = 'ns-resize';
+    });
+
+    document.addEventListener('mousemove', (e) => {
+        if (!isResizing) return;
+        const newHeight = window.innerHeight - e.clientY;
+        if (newHeight > 100 && newHeight < window.innerHeight - 100) {
+            terminalDiv.style.height = `${newHeight}px`;
+            if (editor) editor.layout(); // Update editor layout on resize
+        }
+    });
+
+    document.addEventListener('mouseup', () => {
+        isResizing = false;
+        document.body.style.cursor = 'default';
+    });
+
+    // --- TERMINAL LOGIC ---
+    // Ensure terminal stays focused
+    document.addEventListener('click', (e) => {
+        if (terminalDiv.contains(e.target)) termInput.focus();
+    });
+
+    termInput.addEventListener('keydown', async (e) => {
+        if (e.key === 'Enter') {
+            const cmdLine = termInput.value.trim();
+            const [cmd, ...args] = cmdLine.split(' ');
+            termInput.value = '';
+
+            if (!cmd) return;
+
+            // --- EXIT LOGIC ---
+            if (cmd === ':q') {
+                printTerm("Terminating session... returning to Main Terminal.");
+                setTimeout(() => {
+                    window.location.href = '/'; 
+                }, 800);
+                return;
+            }
+
+            printTerm(`<span class="prompt">guest@m17:~$</span> ${cmdLine}`);
+            
+            if (cmd === 'help') {
+                printTerm("Commands: ls, mkdir [name], rm [name], cat [file], clear, :q (exit)");
+                return;
+            }
+            if (cmd === 'clear') {
+                termOutput.innerHTML = '';
+                return;
+            }
+
+            // --- SERVER-SIDE TERMINAL CALL ---
+            try {
+                const response = await fetch('/api/terminal', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ command: cmd, args: args })
+                });
+                const data = await response.json();
+                printTerm(data.output);
+                
+                // Refresh virtual sidebar if we created/removed folders/files
+                if (cmd === 'mkdir' || cmd === 'rm') {
+                    // Note: In a real app, you would fetch the directory structure again
+                    // For now, we manually sync or clear the virtual state
+                    refresh(); 
+                }
+            } catch (err) {
+                printTerm("<span style='color:red'>Uplink Error: Backend unreachable. Ensure node server.js is running.</span>");
+            }
+        }
+    });
+
+    function printTerm(text) {
+        const div = document.createElement('div');
+        div.style.marginBottom = "4px";
+        div.innerHTML = text;
+        termOutput.appendChild(div);
+        termOutput.scrollTop = termOutput.scrollHeight;
+    }
+
+    // --- FILE EXPLORER RENDERER ---
+    function renderTree(data, container) {
+        container.innerHTML = '';
+        data.forEach(item => {
+            const node = document.createElement('div');
+            node.className = 'tree-node';
+            
+            const itemEl = document.createElement('div');
+            itemEl.className = 'tree-item';
+            
+            let iconName = item.type === 'folder' ? 'folder' : 'file-text';
+            if (item.name.endsWith('.js')) iconName = 'code-2';
+            if (item.name.endsWith('.css')) iconName = 'palette';
+
+            itemEl.innerHTML = `
+                <i data-lucide="${iconName}"></i>
+                <span>${item.name}</span>
+                <div class="item-actions">
+                    <i data-lucide="edit-2" style="width:12px" onclick="event.stopPropagation(); promptRename('${item.id}')"></i>
+                    <i data-lucide="x" style="width:12px" onclick="event.stopPropagation(); deleteItem('${item.id}')"></i>
+                </div>
+            `;
+            
+            itemEl.onclick = () => item.type === 'file' ? openFile(item) : null;
+            node.appendChild(itemEl);
+
+            if (item.type === 'folder' && item.children) {
+                const childContainer = document.createElement('div');
+                childContainer.className = 'indent';
+                renderTree(item.children, childContainer);
+                node.appendChild(childContainer);
+            }
+            container.appendChild(node);
+        });
+        lucide.createIcons();
+    }
+
+    function openFile(file) {
+        welcome.style.display = 'none';
+        editor.setValue(file.content);
+        const ext = file.name.split('.').pop();
+        let lang = (ext === 'html' || ext === 'css') ? ext : 'javascript';
+        monaco.editor.setModelLanguage(editor.getModel(), lang);
+    }
+
+    // --- MODAL & STATE HELPERS ---
+    function promptCreate(type, parentId) {
+        showModal(`NEW ${type.toUpperCase()}`, (val) => {
+            const newItem = { id: Date.now().toString(), name: val, type, content: '', children: type === 'folder' ? [] : undefined };
+            if(parentId === 'root') fs.push(newItem);
+            refresh();
+        });
+    }
+
+    function promptRename(id) {
+        showModal("RENAME", (val) => {
+            const item = findItemById(fs, id);
+            if(item) item.name = val;
+            refresh();
+        });
+    }
+
+    function deleteItem(id) {
+        fs = recursiveFilter(fs, id);
+        refresh();
+    }
+
+    function findItemById(data, id) {
+        for(let item of data) {
+            if(item.id === id) return item;
+            if(item.children) {
+                let found = findItemById(item.children, id);
+                if(found) return found;
+            }
+        }
+    }
+
+    function recursiveFilter(data, id, name = null) {
+        return data.filter(item => {
+            if(id && item.id === id) return false;
+            if(name && item.name === name) return false;
+            if(item.children) item.children = recursiveFilter(item.children, id, name);
+            return true;
+        });
+    }
+
+    function showModal(title, callback) {
+        const overlay = document.getElementById('modalOverlay');
+        const input = document.getElementById('modalInput');
+        document.getElementById('modalTitle').innerText = title;
+        overlay.style.display = 'flex';
+        input.focus();
+        document.getElementById('modalConfirm').onclick = () => {
+            if(input.value) { callback(input.value); closeModal(); }
+        };
+    }
+
+    function closeModal() { 
+        document.getElementById('modalOverlay').style.display = 'none'; 
+        document.getElementById('modalInput').value = '';
+    }
+
+    function refresh() { renderTree(fs, document.getElementById('fileTree')); }
+
+    refresh();
+</script>
+</body>
+</html>
